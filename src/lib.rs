@@ -15,14 +15,14 @@ mod element_test {
     #[test]
     fn as_str() {
         let mut doc = Document::new();
-        doc.inner.insert(0, Element::new_populated("html".into(), vec![Attribute::new("color".into(), "green".into())], 0, vec![1, 2, 3]));
+        doc.inner.insert(0, Element::new_populated("html".into(), vec![Attribute::new("color".into(), "green".into())], 0, vec![1, 2, 3], false));
 
         doc.inner.insert(1, Element::Inner("Hello World".into(), 0));
-        doc.inner.insert(2, Element::new_populated("h1".into(), vec![], 0, vec![4]));
-        doc.inner.insert(3, Element::new_populated("span".into(), vec![], 0, vec![5]));
+        doc.inner.insert(2, Element::new_populated("h1".into(), vec![], 0, vec![4], false));
+        doc.inner.insert(3, Element::new_populated("span".into(), vec![], 0, vec![5], false));
 
         doc.inner.insert(4, Element::Inner("This is a Heading".into(), 2));
-        doc.inner.insert(5, Element::new_populated("a".into(), vec![], 3, vec![6]));
+        doc.inner.insert(5, Element::new_populated("a".into(), vec![], 3, vec![6], false));
 
         doc.inner.insert(6, Element::Inner("This is a link within a span".into(), 5));
         
@@ -138,18 +138,7 @@ mod parse_lex_test {
 
     #[test]
     fn from_str_to_str2() {
-        let input = String::from(
-"<!DOCTYPE html>
-<html color = \"green\">
-    Hello World
-    <h1 color = \"green\" \"unused attr val\">
-        This is a Heading
-    </h1>
-    <span>
-        <a unused_attribute>This is a link within a span</a>
-    </span>
-</html>"
-        );
+        let input = std::fs::read_to_string("test.html").unwrap();
 
         let mut lexer = Lexer::new(input.clone()).unwrap();
         let tokens = lexer.lex();

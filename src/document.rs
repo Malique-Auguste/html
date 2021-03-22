@@ -29,17 +29,21 @@ impl Document {
 
         match element {
             Element::Inner(val, ..) => Ok(val.clone()),
-            Element::UserDefined{tag_name, attributes, children, ..} => {
+            Element::UserDefined{tag_name, attributes, children, self_closing, ..} => {
                 let self_spacing = std::iter::repeat("    ").take(depth).collect::<String>();
                 let child_spacing = std::iter::repeat("    ").take(depth + 1).collect::<String>();
 
                 let mut attributes: Vec<String> = attributes.iter().map(|a| a.as_str()).collect();
-                let mut children: Vec<String> = children.iter().map(|c| self.element_as_str(c, depth + 1).unwrap()).collect();
+                let mut output = attributes.drain(0..).fold(String::from("<") + tag_name, |out, attr| out + " " + &attr);
 
-                let mut output = attributes.drain(0..).fold(String::from("<") + tag_name, |out, attr| out + " " + &attr) + ">";
+                if *self_closing {
+                    return Ok(format!("{}/>", output))
+                }
+
+                let mut children: Vec<String> = children.iter().map(|c| self.element_as_str(c, depth + 1).unwrap()).collect();
                 
 
-                output = children.drain(0..).fold(output, |out, child| out + "\n" + &child_spacing + &child);
+                output = children.drain(0..).fold(output + ">", |out, child| out + "\n" + &child_spacing + &child);
                 Ok(format!("{}\n{}</{}>", output, self_spacing, tag_name))
             }
         }

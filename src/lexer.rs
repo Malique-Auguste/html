@@ -47,7 +47,7 @@ impl Lexer {
                 None => break
             };
 
-            if c == '>' {
+            if c == '>' || c == '=' {
                 self.index -= 1;
                 break
             }

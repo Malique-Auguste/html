@@ -2,6 +2,7 @@ use crate::lexer::Token;
 use crate::document::Document;
 use crate::element::*;
 
+const SELF_CLOSING_TAGS: [&str; 14] = ["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"];
 
 pub struct Parser {
     input: Vec<Token>,
@@ -38,21 +39,31 @@ impl Parser {
     pub fn parse(&mut self) -> Result<Document, String> {
         let mut doc = Document::new();
         let mut current_element = 0;
+        let mut self_closing = false;
 
         loop {
             let token = match self.next() {
                 Some(t) => t,
                 None => break
             };
+            //println!("{:?}", token);
+            //println!("{:?}", self_closing);
+
 
             match token {
                 Token::TagOpening(tag_name) => {
-                    doc.inner.insert(doc.inner.keys().len(), Element::new_empty(tag_name, current_element));
+                    if SELF_CLOSING_TAGS.iter().any(|x| **x == tag_name || (String::from(*x) + "/") == tag_name) {
+                        self_closing = true;
+                        doc.inner.insert(doc.inner.keys().len(), Element::new_empty(tag_name.clone(), current_element, true));
 
+                    }
+                    else {
+                        doc.inner.insert(doc.inner.keys().len(), Element::new_empty(tag_name.clone(), current_element, false));
+                    }
                     let num = doc.inner.keys().len() - 1;
 
                     if num != 0 {
-                        let mut current = doc.inner.get_mut(&current_element).unwrap();
+                        let current = doc.inner.get_mut(&current_element).unwrap();
                         
                         match current {
                             Element::UserDefined{children, ..} => {
@@ -61,13 +72,13 @@ impl Parser {
                             _ => unreachable!()
                         }
                     }
-
                     current_element = doc.inner.keys().len() - 1;
                 },
+
                 Token::Attribute(attr_name) => {
                     if let Token::AttributeValue(_) = self.peek().unwrap() {
                         if let Token::AttributeValue(attr_val) = self.next().unwrap() {
-                            let mut current = doc.inner.get_mut(&current_element).unwrap();
+                            let current = doc.inner.get_mut(&current_element).unwrap();
                             match current {
                                 Element::UserDefined{attributes, ..} => {
                                     attributes.push(Attribute::new(attr_name, attr_val))
@@ -78,13 +89,27 @@ impl Parser {
                     }
                 },
 
-                Token::AttributeValue(_) | Token::RightArrow => {},
+                Token::RightArrow => {
+                    if self_closing {
+                        let current = doc.inner.get(&current_element).unwrap();
+
+                        match current {
+                            Element::UserDefined{parent, ..} => {
+                                current_element = *parent;
+                                self_closing = false;
+                            }
+                            _ => unreachable!()
+                        }
+                    }
+                }
+
+                Token::AttributeValue(_) => {},
 
                 Token::TagValue(tag_val) => {
                     doc.inner.insert(doc.inner.keys().len(), Element::Inner(tag_val, current_element));
 
                     let num = doc.inner.keys().len() - 1;
-                    let mut current = doc.inner.get_mut(&current_element).unwrap();
+                    let current = doc.inner.get_mut(&current_element).unwrap();
 
                     match current {
                         Element::UserDefined{children, ..} => {
@@ -111,7 +136,7 @@ impl Parser {
                 }
             }
 
-
+            //println!("{:#?}", doc);
         }
 
         Ok(doc)
